@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>บันทึกรายรับ-รายจ่าย</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#181b22; --card2:#1f232c;
+    --text:#eef0f3; --muted:#8b93a3;
+    --income:#3ddc84; --expense:#ff5d6c;
+    --accent:#5b8cff; --border:#272b34;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:'Segoe UI',Tahoma,sans-serif; background:var(--bg); color:var(--text);
+    padding-bottom:70px; user-select:none; -webkit-user-select:none;
+  }
+  #app{max-width:480px; margin:0 auto;}
+  header{
+    background:linear-gradient(135deg,#1a1e27,#12141a);
+    padding:20px 16px 24px; border-bottom:1px solid var(--border);
+  }
+  .balance-label{color:var(--muted); font-size:13px; text-align:center;}
+  .balance-amount{font-size:34px; font-weight:700; text-align:center; margin:6px 0 16px;}
+  .balance-amount.neg{color:var(--expense);}
+  .sub-row{display:flex; gap:10px;}
+  .sub-card{
+    flex:1; background:var(--card); border-radius:12px; padding:10px 12px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .sub-card .lbl{font-size:11px; color:var(--muted);}
+  .sub-card .val{font-size:16px; font-weight:600;}
+  .sub-card.income .val{color:var(--income);}
+  .sub-card.expense .val{color:var(--expense);}
+  main{padding:14px;}
+  section{display:none;}
+  section.active{display:block; animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .card{background:var(--card); border-radius:14px; padding:14px; margin-bottom:12px; border:1px solid var(--border);}
+  .card h3{font-size:14px; color:var(--muted); margin-bottom:10px; font-weight:600;}
+  .tx-item{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .tx-item:last-child{border-bottom:none;}
+  .tx-icon{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; background:var(--card2);}
+  .tx-info{flex:1; min-width:0;}
+  .tx-cat{font-size:14px; font-weight:600;}
+  .tx-date{font-size:11px; color:var(--muted);}
+  .tx-amt{font-size:15px; font-weight:700; white-space:nowrap;}
+  .tx-amt.income{color:var(--income);}
+  .tx-amt.expense{color:var(--expense);}
+  .tx-del{color:var(--muted); font-size:18px; padding:4px 8px; margin-left:4px;}
+  .empty{text-align:center; color:var(--muted); padding:30px 10px; font-size:13px;}
+  .type-toggle{display:flex; gap:8px; margin-bottom:14px;}
+  .type-btn{flex:1; padding:12px; border-radius:12px; text-align:center; font-weight:600; background:var(--card2); border:2px solid transparent; color:var(--muted);}
+  .type-btn.active.income{border-color:var(--income); color:var(--income); background:rgba(61,220,132,.1);}
+  .type-btn.active.expense{border-color:var(--expense); color:var(--expense); background:rgba(255,93,108,.1);}
+  label{display:block; font-size:12px; color:var(--muted); margin:12px 0 6px;}
+  input, select, textarea{width:100%; background:var(--card2); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:10px; font-size:15px; outline:none;}
+  .cat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:6px;}
+  .cat-btn{background:var(--card2); border:2px solid transparent; border-radius:10px; padding:10px 4px; text-align:center; font-size:11px; color:var(--muted);}
+  .cat-btn .emo{font-size:20px; display:block; margin-bottom:2px;}
+  .cat-btn.active{border-color:var(--accent); color:var(--text); background:rgba(91,140,255,.12);}
+  .btn-main{width:100%; background:var(--accent); color:#fff; border:none; padding:14px; border-radius:12px; font-size:16px; font-weight:700; margin-top:16px;}
+  .btn-outline{width:100%; background:transparent; border:1px solid var(--border); color:var(--text); padding:12px; border-radius:12px; font-size:14px; font-weight:600; margin-top:10px;}
+  .btn-danger{color:var(--expense); border-color:var(--expense);}
+  .seg{display:flex; background:var(--card2); border-radius:12px; padding:4px; margin-bottom:14px;}
+  .seg-btn{flex:1; text-align:center; padding:9px; border-radius:9px; font-size:13px; font-weight:600; color:var(--muted);}
+  .seg-btn.active{background:var(--accent); color:#fff;}
+  .period-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .period-nav button{background:var(--card2); border:none; color:var(--text); width:36px; height:36px; border-radius:10px; font-size:16px;}
+  .period-nav .p-label{font-size:15px; font-weight:600;}
+  .bar-row{margin-bottom:10px;}
+  .bar-row .bar-top{display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; color:var(--muted);}
+  .bar-track{height:8px; background:var(--card2); border-radius:6px; overflow:hidden; display:flex;}
+  .bar-fill{height:100%;}
+  .bar-fill.income{background:var(--income);}
+  .bar-fill.expense{background:var(--expense);}
+  .day-group{margin-bottom:14px;}
+  .day-head{display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px; padding:0 2px;}
+  .day-head b{color:var(--text);}
+  #importInput{display:none;}
+  .stat-line{display:flex; justify-content:space-between; padding:8px 0; font-size:14px; border-bottom:1px solid var(--border);}
+  .stat-line:last-child{border-bottom:none;}
+  .stat-line span:last-child{font-weight:600;}
+  #toast{position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:#2a2f3a; color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; opacity:0; transition:.25s; pointer-events:none; white-space:nowrap; z-index:99;}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  nav#bottomNav{position:fixed; bottom:0; left:0; right:0; max-width:480px; margin:0 auto; background:var(--card); border-top:1px solid var(--border); display:flex; padding:6px 0 max(6px, env(safe-area-inset-bottom));}
+  .nav-btn{flex:1; text-align:center; padding:8px 0; color:var(--muted); font-size:11px;}
+  .nav-btn .ic{font-size:20px; display:block; margin-bottom:2px;}
+  .nav-btn.active{color:var(--accent);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="balance-label">ยอดเงินคงเหลือ</div>
+    <div class="balance-amount" id="balanceAmount">฿0</div>
+    <div class="sub-row">
+      <div class="sub-card income"><span class="lbl">รายรับทั้งหมด</span><span class="val" id="totalIncome">฿0</span></div>
+      <div class="sub-card expense"><span class="lbl">รายจ่ายทั้งหมด</span><span class="val" id="totalExpense">฿0</span></div>
+    </div>
+  </header>
+  <main>
+    <section id="tab-home" class="active">
+      <div class="card">
+        <h3>รายการล่าสุด</h3>
+        <div id="recentList"></div>
+      </div>
+    </section>
+    <section id="tab-add">
+      <div class="card">
+        <div class="type-toggle">
+          <div class="type-btn income active" data-type="expense" id="btnTypeExpense">รายจ่าย</div>
+          <div class="type-btn income" data-type="income" id="btnTypeIncome">รายรับ</div>
+        </div>
+        <label>จำนวนเงิน (บาท)</label>
+        <input type="number" id="inpAmount" placeholder="0.00" inputmode="decimal">
+        <label>หมวดหมู่</label>
+        <div class="cat-grid" id="catGrid"></div>
+        <label>บันทึกเพิ่มเติม (ไม่บังคับ)</label>
+        <input type="text" id="inpNote" placeholder="เช่น ข้าวเที่ยงกับเพื่อน">
+        <label>วันที่</label>
+        <input type="date" id="inpDate">
+        <button class="btn-main" id="btnAdd">บันทึกรายการ</button>
+      </div>
+    </section>
+    <section id="tab-summary">
+      <div class="seg">
+        <div class="seg-btn active" data-mode="daily">รายวัน</div>
+        <div class="seg-btn" data-mode="monthly">รายเดือน</div>
+      </div>
+      <div class="card">
+        <div class="period-nav">
+          <button id="prevPeriod">‹</button>
+          <div class="p-label" id="periodLabel">-</div>
+          <button id="nextPeriod">›</button>
+        </div>
+        <div class="bar-row">
+          <div class="bar-top"><span>รายรับ</span><span id="sumIncome">฿0</span></div>
+          <div class="bar-track"><div class="bar-fill income" id="barIncome" style="width:0%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-top"><span>รายจ่าย</span><span id="sumExpense">฿0</span></div>
+          <div class="bar-track"><div class="bar-fill expense" id="barExpense" style="width:0%"></div></div>
+        </div>
+        <div class="stat-line"><span>คงเหลือช่วงนี้</span><span id="sumNet">฿0</span></div>
+      </div>
+      <div class="card">
+        <h3 id="detailTitle">รายละเอียด</h3>
+        <div id="summaryDetail"></div>
+      </div>
+    </section>
+    <section id="tab-file">
+      <div class="card">
+        <h3>สถิติข้อมูล</h3>
+        <div class="stat-line"><span>จำนวนรายการทั้งหมด</span><span id="statCount">0</span></div>
+        <div class="stat-line"><span>เริ่มบันทึกตั้งแต่</span><span id="statFirstDate">-</span></div>
+      </div>
+      <div class="card">
+        <h3>บันทึก / สำรองข้อมูล</h3>
+        <button class="btn-main" id="btnExportJson">💾 บันทึกลงไฟล์ (JSON)</button>
+        <button class="btn-outline" id="btnExportCsv">📊 ส่งออกเป็น CSV (Excel)</button>
+        <button class="btn-outline" id="btnImport">📂 โหลดข้อมูลจากไฟล์</button>
+        <input type="file" id="importInput" accept="application/json">
+      </div>
+      <div class="card">
+        <h3>ล้างข้อมูล</h3>
+        <button class="btn-outline btn-danger" id="btnClear">🗑️ ลบข้อมูลทั้งหมด</button>
+      </div>
+    </section>
+  </main>
+  <div id="toast"></div>
+  <nav id="bottomNav">
+    <div class="nav-btn active" data-tab="home"><span class="ic">🏠</span>หน้าหลัก</div>
+    <div class="nav-btn" data-tab="add"><span class="ic">➕</span>เพิ่มรายการ</div>
+    <div class="nav-btn" data-tab="summary"><span class="ic">📊</span>สรุป</div>
+    <div class="nav-btn" data-tab="file"><span class="ic">📁</span>ไฟล์</div>
+  </nav>
+</div>
+<script>
+window.__ET = {};
+(function(ET){
+
+  ET.CATS = {
+    expense: [
+      {id:'food', emo:'🍜', name:'อาหาร'},
+      {id:'transport', emo:'🚗', name:'เดินทาง'},
+      {id:'shopping', emo:'🛍️', name:'ช้อปปิ้ง'},
+      {id:'bill', emo:'💡', name:'บิล/ค่าน้ำไฟ'},
+      {id:'home', emo:'🏠', name:'ที่พัก'},
+      {id:'health', emo:'💊', name:'สุขภาพ'},
+      {id:'fun', emo:'🎬', name:'บันเทิง'},
+      {id:'other', emo:'📦', name:'อื่นๆ'},
+    ],
+    income: [
+      {id:'salary', emo:'💰', name:'เงินเดือน'},
+      {id:'bonus', emo:'🎁', name:'โบนัส'},
+      {id:'business', emo:'🏪', name:'ธุรกิจ'},
+      {id:'invest', emo:'📈', name:'ลงทุน'},
+      {id:'gift', emo:'🎉', name:'ได้รับ'},
+      {id:'other', emo:'📦', name:'อื่นๆ'},
+    ]
+  };
+
+  ET.state = {
+    transactions: [],
+    currentType: 'expense',
+    currentCat: null,
+    activeTab: 'home',
+    summaryMode: 'daily',
+    summaryDate: new Date(),
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const STORE_KEY = 'et_transactions_v1';
+
+  ET.load = function(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      ET.state.transactions = raw ? JSON.parse(raw) : [];
+    }catch(e){ ET.state.transactions = []; }
+  };
+  ET.save = function(){
+    localStorage.setItem(STORE_KEY, JSON.stringify(ET.state.transactions));
+  };
+
+  ET.formatMoney = function(n){
+    const sign = n < 0 ? '-' : '';
+    return sign + '฿' + Math.abs(n).toLocaleString('th-TH', {minimumFractionDigits:0, maximumFractionDigits:2});
+  };
+
+  ET.toast = function(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(ET._toastTimer);
+    ET._toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  };
+
+  function uid(){
+    return 'tx_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+
+  ET.renderCatGrid = function(){
+    const cats = ET.CATS[ET.state.currentType];
+    if(!ET.state.currentCat || !cats.find(c=>c.id===ET.state.currentCat)){
+      ET.state.currentCat = cats[0].id;
+    }
+    const grid = $('catGrid');
+    grid.innerHTML = cats.map(c => `
+      <div class="cat-btn ${c.id===ET.state.currentCat?'active':''}" data-cat="${c.id}">
+        <span class="emo">${c.emo}</span>${c.name}
+      </div>`).join('');
+    grid.querySelectorAll('.cat-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        ET.state.currentCat = btn.dataset.cat;
+        ET.renderCatGrid();
+      });
+    });
+  };
+
+  function getCatInfo(type, catId){
+    return (ET.CATS[type]||[]).find(c=>c.id===catId) || {emo:'📦', name:catId};
+  }
+
+  ET.addTransaction = function(){
+    const amtRaw = $('inpAmount').value;
+    const amount = parseFloat(amtRaw);
+    if(!amtRaw || isNaN(amount) || amount <= 0){
+      ET.toast('กรุณาใส่จำนวนเงินให้ถูกต้อง');
+      return;
+    }
+    const date = $('inpDate').value || new Date().toISOString().slice(0,10);
+    const note = $('inpNote').value.trim();
+
+    ET.state.transactions.unshift({
+      id: uid(), type: ET.state.currentType, category: ET.state.currentCat,
+      amount: amount, note: note, date: date, ts: Date.now()
+    });
+    ET.save();
+    ET.toast('บันทึกรายการเรียบร้อย');
+    $('inpAmount').value = '';
+    $('inpNote').value = '';
+    ET.renderAll();
+    ET.switchTab('home');
+  };
+
+  ET.deleteTransaction = function(id){
+    ET.state.transactions = ET.state.transactions.filter(t=>t.id!==id);
+    ET.save();
+    ET.renderAll();
+    ET.toast('ลบรายการแล้ว');
+  };
+
+  function txItemHtml(t){
+    const info = getCatInfo(t.type, t.category);
+    const sign = t.type==='income' ? '+' : '-';
+    return `
+      <div class="tx-item">
+        <div class="tx-icon">${info.emo}</div>
+        <div class="tx-info">
+          <div class="tx-cat">${info.name}${t.note ? ' · '+t.note : ''}</div>
+          <div class="tx-date">${t.date}</div>
+        </div>
+        <div class="tx-amt ${t.type}">${sign}${ET.formatMoney(t.amount)}</div>
+        <div class="tx-del" data-del="${t.id}">✕</div>
+      </div>`;
+  }
+
+  ET.renderRecent = function(){
+    const list = ET.state.transactions.slice(0, 15);
+    const box = $('recentList');
+    box.innerHTML = list.length
+      ? list.map(txItemHtml).join('')
+      : `<div class="empty">ยังไม่มีรายการ<br>กด "เพิ่มรายการ" เพื่อเริ่มบันทึก</div>`;
+    box.querySelectorAll('[data-del]').forEach(el=>{
+      el.addEventListener('click', ()=> ET.deleteTransaction(el.dataset.del));
+    });
+  };
+
+  ET.renderBalance = function(){
+    let income = 0, expense = 0;
+    ET.state.transactions.forEach(t=>{
+      if(t.type==='income') income += t.amount; else expense += t.amount;
+    });
+    const balance = income - expense;
+    const balEl = $('balanceAmount');
+    balEl.textContent = ET.formatMoney(balance);
+    balEl.classList.toggle('neg', balance < 0);
+    $('totalIncome').textContent = ET.formatMoney(income);
+    $('totalExpense').textContent = ET.formatMoney(expense);
+  };
+
+  ET.renderAll = function(){
+    ET.renderBalance();
+    ET.renderRecent();
+    ET.renderSummary();
+    ET.renderFileStats();
+  };
+
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function keyOfDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function keyOfMonth(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1); }
+  const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  ET.renderSummary = function(){
+    const mode = ET.state.summaryMode;
+    const d = ET.state.summaryDate;
+    let label, filtered;
+    if(mode === 'daily'){
+      label = d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear()+543);
+      const key = keyOfDate(d);
+      filtered = ET.state.transactions.filter(t => t.date === key);
+    } else {
+      label = THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear()+543);
+      const key = keyOfMonth(d);
+      filtered = ET.state.transactions.filter(t => t.date && t.date.slice(0,7) === key);
+    }
+    $('periodLabel').textContent = label;
+
+    let income=0, expense=0;
+    filtered.forEach(t => t.type==='income' ? income+=t.amount : expense+=t.amount);
+    const max = Math.max(income, expense, 1);
+
+    $('sumIncome').textContent = ET.formatMoney(income);
+    $('sumExpense').textContent = ET.formatMoney(expense);
+    $('sumNet').textContent = ET.formatMoney(income-expense);
+    $('barIncome').style.width = (income/max*100)+'%';
+    $('barExpense').style.width = (expense/max*100)+'%';
+
+    const detailBox = $('summaryDetail');
+    if(mode === 'daily'){
+      $('detailTitle').textContent = 'รายการของวันนี้';
+      detailBox.innerHTML = filtered.length
+        ? filtered.map(t=>{
+            const info = ET.CATS[t.type].find(c=>c.id===t.category) || {emo:'📦',name:t.category};
+            const sign = t.type==='income' ? '+' : '-';
+            return `<div class="tx-item">
+              <div class="tx-icon">${info.emo}</div>
+              <div class="tx-info"><div class="tx-cat">${info.name}${t.note?' · '+t.note:''}</div></div>
+              <div class="tx-amt ${t.type}">${sign}${ET.formatMoney(t.amount)}</div>
+            </div>`;
+          }).join('')
+        : `<div class="empty">ไม่มีรายการในวันนี้</div>`;
+    } else {
+      $('detailTitle').textContent = 'สรุปแยกรายวันในเดือนนี้';
+      const byDay = {};
+      filtered.forEach(t=>{
+        byDay[t.date] = byDay[t.date] || {income:0, expense:0};
+        t.type==='income' ? byDay[t.date].income += t.amount : byDay[t.date].expense += t.amount;
+      });
+      const days = Object.keys(byDay).sort().reverse();
+      detailBox.innerHTML = days.length
+        ? days.map(dt=>{
+            const v = byDay[dt];
+            const net = v.income - v.expense;
+            return `<div class="day-group">
+              <div class="day-head">
+                <span>${dt}</span><b style="color:${net>=0?'var(--income)':'var(--expense)'}">${ET.formatMoney(net)}</b>
+              </div>
+            </div>`;
+          }).join('')
+        : `<div class="empty">ไม่มีรายการในเดือนนี้</div>`;
+    }
+  };
+
+  ET.shiftPeriod = function(dir){
+    const d = new Date(ET.state.summaryDate);
+    if(ET.state.summaryMode === 'daily') d.setDate(d.getDate()+dir);
+    else d.setMonth(d.getMonth()+dir);
+    ET.state.summaryDate = d;
+    ET.renderSummary();
+  };
+
+  ET.renderFileStats = function(){
+    const list = ET.state.transactions;
+    $('statCount').textContent = list.length;
+    if(list.length){
+      const sorted = [...list].sort((a,b)=>a.date.localeCompare(b.date));
+      $('statFirstDate').textContent = sorted[0].date;
+    } else {
+      $('statFirstDate').textContent = '-';
+    }
+  };
+
+  function downloadBlob(content, filename, type){
+    const blob = new Blob([content], {type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  ET.exportJson = function(){
+    const data = JSON.stringify({exportedAt: new Date().toISOString(), transactions: ET.state.transactions}, null, 2);
+    downloadBlob(data, 'expense-backup-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
+    ET.toast('บันทึกไฟล์ JSON แล้ว');
+  };ET.exportJson = function(){
+    const data = JSON.stringify({exportedAt: new Date().toISOString(), transactions: ET.state.transactions}, null, 2);
+    downloadBlob(data, 'expense-backup-' + new Date().toISOString().slice(0,10) + '.json', 'application/json');
+    ET.toast('บันทึกไฟล์ JSON แล้ว');
+  };
+
+  ET.exportCsv = function(){
+    const header = 'วันที่,ประเภท,หมวดหมู่,จำนวนเงิน,บันทึก\n';
+    const rows = ET.state.transactions.map(t=>{
+      const info = ET.CATS[t.type].find(c=>c.id===t.category) || {name:t.category};
+      const typeText = t.type==='income' ? 'รายรับ' : 'รายจ่าย';
+      const note = (t.note||'').replace(/,/g,' ');
+      return `${t.date},${typeText},${info.name},${t.amount},${note}`;
+    }).join('\n');
+    downloadBlob('\uFEFF' + header + rows, 'expense-' + new Date().toISOString().slice(0,10) + '.csv', 'text/csv');
+    ET.toast('ส่งออก CSV แล้ว');
+  };
+
+  ET.importJson = function(file){
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const parsed = JSON.parse(e.target.result);
+        const list = Array.isArray(parsed) ? parsed : parsed.transactions;
+        if(!Array.isArray(list)) throw new Error('bad format');
+        const valid = list.filter(t => t && t.amount && t.type && t.date);
+        if(!confirm(`พบ ${valid.length} รายการในไฟล์\nต้องการรวมกับข้อมูลปัจจุบันหรือไม่?`)) return;
+        const existingIds = new Set(ET.state.transactions.map(t=>t.id));
+        valid.forEach(t=>{
+          if(!t.id || existingIds.has(t.id)) t.id = 'tx_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+        });
+        ET.state.transactions = [...valid, ...ET.state.transactions];
+        ET.save();
+        ET.renderAll();
+        ET.toast('โหลดข้อมูลสำเร็จ');
+      }catch(err){
+        ET.toast('ไฟล์ไม่ถูกต้อง');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  ET.switchTab = function(tab){
+    ET.state.activeTab = tab;
+    document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+    $('tab-'+tab).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    if(tab === 'add'){
+      $('inpDate').value = new Date().toISOString().slice(0,10);
+      ET.renderCatGrid();
+    }
+  };
+
+  ET.init = function(){
+    ET.load();
+    $('inpDate').value = new Date().toISOString().slice(0,10);
+    ET.renderCatGrid();
+    ET.renderAll();
+
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      b.addEventListener('click', ()=> ET.switchTab(b.dataset.tab));
+    });
+
+    $('btnTypeExpense').addEventListener('click', ()=>{
+      ET.state.currentType = 'expense'; ET.state.currentCat = null;
+      $('btnTypeExpense').classList.add('active','expense'); $('btnTypeExpense').classList.remove('income');
+      $('btnTypeIncome').classList.remove('active','income');
+      ET.renderCatGrid();
+    });
+    $('btnTypeIncome').addEventListener('click', ()=>{
+      ET.state.currentType = 'income'; ET.state.currentCat = null;
+      $('btnTypeIncome').classList.add('active','income');
+      $('btnTypeExpense').classList.remove('active','expense'); $('btnTypeExpense').classList.add('income');
+      ET.renderCatGrid();
+    });
+
+    $('btnAdd').addEventListener('click', ET.addTransaction);
+
+    document.querySelectorAll('.seg-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        document.querySelectorAll('.seg-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        ET.state.summaryMode = b.dataset.mode;
+        ET.state.summaryDate = new Date();
+        ET.renderSummary();
+      });
+    });
+    $('prevPeriod').addEventListener('click', ()=> ET.shiftPeriod(-1));
+    $('nextPeriod').addEventListener('click', ()=> ET.shiftPeriod(1));
+
+    $('btnExportJson').addEventListener('click', ET.exportJson);
+    $('btnExportCsv').addEventListener('click', ET.exportCsv);
+    $('btnImport').addEventListener('click', ()=> $('importInput').click());
+    $('importInput').addEventListener('change', (e)=>{
+      if(e.target.files[0]) ET.importJson(e.target.files[0]);
+      e.target.value = '';
+    });
+    $('btnClear').addEventListener('click', ()=>{
+      if(confirm('ต้องการลบข้อมูลทั้งหมดหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')){
+        ET.state.transactions = [];
+        ET.save();
+        ET.renderAll();
+        ET.toast('ลบข้อมูลทั้งหมดแล้ว');
+      }
+    });
+  };
+
+  ET.init();
+
+})(window.__ET);
+</script>
+</body>
+</html>
